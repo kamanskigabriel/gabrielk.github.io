@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rolador de Dados — D&D</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --parch: #f5ecd7;
+      --parch-dark: #e8d9ba;
+      --gold: #c9920a;
+      --gold-light: #f0c040;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background-color: #1a0d05;
+      background-image:
+        radial-gradient(ellipse at 20% 10%, #2d1a0a 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 90%, #1f0808 0%, transparent 55%);
+      min-height: 100vh;
+      font-family: 'Crimson Text', Georgia, serif;
+      color: var(--parch);
+    }
+
+    header {
+      text-align: center;
+      padding: 2.8rem 1rem 1.5rem;
+    }
+    header::after {
+      content: '';
+      display: block;
+      margin: 1.2rem auto 0;
+      width: 55%;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--gold), transparent);
+    }
+    h1.title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(1.8rem, 5vw, 3.2rem);
+      font-weight: 900;
+      color: var(--gold-light);
+      text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 40px rgba(201,146,10,0.3);
+      margin: 0;
+      letter-spacing: 0.05em;
+    }
+    .subtitle {
+      font-style: italic;
+      color: #c4a472;
+      font-size: 1.05rem;
+      margin-top: 0.4rem;
+      letter-spacing: 0.08em;
+    }
+
+    .panel {
+      background: linear-gradient(160deg, #2a1505 0%, #1e0e04 100%);
+      border: 1px solid #6b4c1e;
+      border-radius: 16px;
+      box-shadow: 0 0 0 1px #3d2509, 0 8px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,200,80,0.08);
+      padding: 2rem 1.8rem;
+    }
+
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+    .section-title::before, .section-title::after {
+      content: ''; flex: 1; height: 1px;
+    }
+    .section-title::before { background: linear-gradient(to right, transparent, #6b4c1e); }
+    .section-title::after  { background: linear-gradient(to left,  transparent, #6b4c1e); }
+
+    /* GRADE DE DADOS */
+    .dice-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 480px) { .dice-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .btn-dice {
+      all: unset; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+      padding: 14px 8px;
+      border: 1px solid #5a3c12; border-radius: 12px;
+      background: linear-gradient(170deg, #2e1a08, #1c0d04);
+      transition: all 0.18s ease;
+      position: relative; overflow: hidden; user-select: none;
+    }
+    .btn-dice::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(240,192,64,0.08) 0%, transparent 70%);
+      opacity: 0; transition: opacity 0.18s;
+    }
+    .btn-dice:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(201,146,10,0.25); }
+    .btn-dice:hover::before { opacity: 1; }
+    .btn-dice:active { transform: scale(0.96); }
+    .btn-dice.active {
+      border-color: var(--gold-light);
+      background: linear-gradient(170deg, #3d2208, #261005);
+      box-shadow: 0 0 0 1px rgba(240,192,64,0.4), 0 4px 20px rgba(201,146,10,0.3);
+    }
+    .dice-icon { width: 44px; height: 44px; }
+    .dice-label {
+      font-family: 'Cinzel', serif; font-size: 0.82rem; font-weight: 600;
+      color: var(--parch-dark); letter-spacing: 0.05em;
+    }
+    .btn-dice.active .dice-label { color: var(--gold-light); }
+
+    /* CONTROLES */
+    .ctrl-row {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(0,0,0,0.25); border: 1px solid #3d2509; border-radius: 10px; padding: 12px 16px;
+    }
+    .ctrl-label { font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.1em; color: #b09060; flex-shrink: 0; }
+    .ctrl-btns { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .btn-ctrl {
+      all: unset; cursor: pointer; width: 30px; height: 30px;
+      border: 1px solid #5a3c12; border-radius: 6px; background: #1c0d04;
+      color: var(--gold); font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: 0.15s; line-height: 1;
+    }
+    .btn-ctrl:hover { border-color: var(--gold); background: #2e1a08; }
+    .btn-ctrl:active { transform: scale(0.93); }
+    .ctrl-val { font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 600; color: var(--parch); min-width: 36px; text-align: center; }
+
+    /* BOTÃO ROLAR */
+    .btn-roll {
+      all: unset; cursor: pointer; width: 100%; padding: 16px;
+      background: linear-gradient(135deg, #7a1a0a, #a02010, #7a1a0a);
+      border: 1px solid #c04020; border-radius: 12px;
+      font-family: 'Cinzel', serif; font-size: 1.05rem; font-weight: 600;
+      letter-spacing: 0.12em; color: #ffd9a0; text-align: center; text-transform: uppercase;
+      transition: all 0.18s;
+      box-shadow: 0 4px 20px rgba(120,20,10,0.4), inset 0 1px 0 rgba(255,180,100,0.15);
+      position: relative; overflow: hidden;
+    }
+    .btn-roll::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.06) 0%, transparent 50%);
+    }
+    .btn-roll:hover {
+      background: linear-gradient(135deg, #9a2010, #c03018, #9a2010);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(160,32,16,0.55), inset 0 1px 0 rgba(255,180,100,0.2);
+    }
+    .btn-roll:active { transform: scale(0.97); }
+    .btn-roll:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    /* ── RESULTADO COM MÚLTIPLOS DADOS ── */
+    .resultado-box {
+      background: rgba(0,0,0,0.35); border: 1px solid #4a3010; border-radius: 14px;
+      padding: 1.6rem 1.5rem; text-align: center; min-height: 200px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .resultado-box::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 60%; height: 1px;
+      background: linear-gradient(to right, transparent, #6b4c1e, transparent);
+    }
+
+    .res-label { font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: #8a6830; margin-bottom: 0.8rem; }
+
+    /* Grade de dados individuais rolando */
+    #dados-roll-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+
+    .dado-slot {
+      width: 64px; height: 64px;
+      border: 1px solid #5a3c12; border-radius: 10px;
+      background: linear-gradient(170deg, #2e1a08, #1c0d04);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+      flex-shrink: 0;
+    }
+    .dado-slot.final {
+      border-color: var(--gold);
+      box-shadow: 0 0 12px rgba(240,192,64,0.25);
+      animation: slotFinal 0.3s ease;
+    }
+    @keyframes slotFinal {
+      0%   { transform: scale(0.85); }
+      60%  { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .dado-slot.critico { border-color: #4ade80; box-shadow: 0 0 14px rgba(74,222,128,0.3); }
+    .dado-slot.fumble  { border-color: #f87171; box-shadow: 0 0 14px rgba(248,113,113,0.3); }
+
+    .slot-numero {
+      font-family: 'Cinzel', serif;
+      font-size: 1.6rem; font-weight: 900;
+      color: var(--gold-light);
+      line-height: 1;
+      transition: color 0.1s;
+    }
+    .slot-numero.rolling { color: #8a6830; }
+    .slot-numero.critico-num { color: #4ade80; }
+    .slot-numero.fumble-num  { color: #f87171; }
+
+    /* Total */
+    .total-row {
+      display: flex; align-items: baseline; gap: 10px;
+      margin-top: 0.4rem;
+    }
+    .total-label { font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.15em; color: #8a6830; }
+    #valor-total {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(2.5rem, 9vw, 4rem); font-weight: 900;
+      color: var(--gold-light); line-height: 1;
+      text-shadow: 0 0 24px rgba(240,192,64,0.35), 0 2px 8px rgba(0,0,0,0.8);
+    }
+    #valor-total.show { animation: popIn 0.35s ease; }
+    @keyframes popIn {
+      0%   { transform: scale(0.7); opacity: 0.3; }
+      65%  { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+    #mod-row { font-family: 'Cinzel', serif; font-size: 0.85rem; color: #8a6830; margin-top: 4px; }
+
+    .badge-especial {
+      font-family: 'Cinzel', serif; font-size: 0.75rem;
+      padding: 3px 12px; border-radius: 20px; letter-spacing: 0.08em;
+      margin-top: 0.5rem; display: inline-block;
+    }
+    .critico { background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.35); color: #4ade80; }
+    .fumble  { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.35); color: #f87171; }
+
+    /* ESTATÍSTICAS */
+    .stat-card { background: rgba(0,0,0,0.2); border: 1px solid #3d2509; border-radius: 10px; padding: 10px 14px; text-align: center; }
+    .stat-value { font-family: 'Cinzel', serif; font-size: 1.25rem; font-weight: 700; color: var(--gold); }
+    .stat-name { font-size: 0.72rem; color: #7a5830; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+
+    /* HISTÓRICO */
+    .historico-list {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-direction: column; gap: 6px;
+      max-height: 220px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: #5a3c12 transparent;
+    }
+    .historico-list::-webkit-scrollbar { width: 4px; }
+    .historico-list::-webkit-scrollbar-thumb { background: #5a3c12; border-radius: 4px; }
+    .historico-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; border-radius: 8px;
+      background: rgba(0,0,0,0.2); border: 1px solid #2e1a06; font-size: 0.9rem;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+    .h-formula { font-style: italic; color: #b09060; font-size: 0.82rem; }
+    .h-result { font-family: 'Cinzel', serif; font-weight: 600; color: var(--gold-light); }
+    .h-result.critico { color: #4ade80; }
+    .h-result.fumble  { color: #f87171; }
+    .historico-vazio { text-align: center; color: #5a4020; font-style: italic; font-size: 0.9rem; padding: 1rem 0; }
+    .btn-limpar { all: unset; cursor: pointer; font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.1em; color: #6a4820; border: 1px solid #3d2509; border-radius: 6px; padding: 4px 10px; transition: 0.15s; }
+    .btn-limpar:hover { color: #c04020; border-color: #7a2010; }
+
+    hr.divider { border: none; border-top: 1px solid #3d2509; margin: 1.4rem 0; }
+  </style>
+</head>
+<body>
+
+  <header class="container-fluid">
+    <h1 class="title">⚔️ Rolador de Dados ⚔️</h1>
+    <p class="subtitle">Dungeons &amp; Dragons</p>
+  </header>
+
+  <main class="container pb-5" style="max-width: 820px;">
+    <div class="row g-4">
+
+      <!-- COLUNA ESQUERDA -->
+      <div class="col-lg-6 d-flex flex-column gap-3">
+        <div class="panel">
+          <div class="section-title">Escolha o Dado</div>
+
+          <div class="dice-grid mb-3">
+            <button class="btn-dice" data-sides="4"   onclick="selecionarDado(4)">
+              <svg class="dice-icon" viewBox="0 0 48 48" fill="none">
+                <polygon points="24,5 44,40 4,40" stroke="#a07840" stroke-width="2" stroke-linejoin="round" fill="rgba(201,146,10,0.08)"/>
+                <line x1="24" y1="5" x2="24" y2="40" stroke="#a07840" stroke-width="1" stroke-dasharray="3,2"/>
+                <text x="24" y="35" text-anchor="middle" font-family="Cinzel,serif" font-size="10" fill="#c9920a" font-weight="600">4</text>
+              </svg>
+              <span class="dice-label">d4</span>
+            </button>
+            <button class="btn-dice" data-sides="6"   onclick="selecionarDado(6)">
+              <svg class="dice-icon" viewBox="0 0 48 48" fill="none">
+                <rect x="7" y="7" width="34" height="34" rx="5" stroke="#a07840" stroke-width="2" fill="rgba(201,146,10,0.08)"/>
+                <text x="24" y="30" text-anchor="middle" font-family="Cinzel,serif" font-size="13" fill="#c9920a" font-weight="600">6</text>
+              </svg>
+              <span class="dice-label">d6</span>
+            </button>
+            <button class="btn-dice" data-sides="8"   onclick="selecionarDado(8)">
+              <svg class="dice-icon" viewBox="0 0 48 48" fill="none">
+                <polygon points="24,4 43,24 24,44 5,24" stroke="#a07840" stroke-width="2" stroke-linejoin="round" fill="rgba(201,146,10,0.08)"/>
+                <line x1="5" y1="24" x2="43" y2="24" stroke="#a07840" stroke-width="1" stroke-dasharray="3,2"/>
+                <text x="24" y="29" text-anchor="middle" font-family="Cinzel,serif" font-size="12" fill="#c9920a" font-weight="600">8</text>
+              </svg>
+              <span class="dice-label">d8</span>
+            </button>
+            <button class="btn-dice" data-sides="10"  onclick="selecionarDado(10)">
+              <svg class="dice-icon" viewBox="0 0 48 48" fill="none">
+                <polygon points="24,4 42,18 36,40 12,40 6,18" stroke="#a07840" stroke-width="2" stroke-linejoin="round" fill="rgba(201,146,10,0.08)"/>
+                <text x="24" y="30" text-anchor="middle" font-family="Cinzel,serif" font-size="11" fill="#c9920a" font-weight="600">10</text>
+              </svg>
+              <span class="dice-label">d10</span>
+            </button>
+            <button class="btn-dice" data-sides="12"  onclick="selecionarDado(12)">
+              <svg class="dice-icon" viewBox="0 0 48 48" fill="none">
+                <polygon points="24,3 33,8 41,16 43,26 38,36 28,43 20,43 10,36 5,26 7,16 15,8" stroke="#a07840" stroke-width="2" stroke-linejoin="round" fill="rgba(201,146,10,0.08)"/>
+                <text x="24" y="30" text-anchor="middle" font-family="Cinzel,serif" font-size="11" fill="#c9920a" font-weight="600">12</text>
+              </svg>
+              <span class="dice-label">d12</span>
+            </button>
+            <button class="btn-dice" data-sides="20"  onclick="selecionarDado(20)">
+              <svg class="dice-icon" viewBox="0 0 48 48" fill="none">
+                <polygon points="24,3 44,15 44,33 24,45 4,33 4,15" stroke="#a07840" stroke-width="2" stroke-linejoin="round" fill="rgba(201,146,10,0.08)"/>
+                <line x1="4" y1="15" x2="44" y2="15" stroke="#a07840" stroke-width="1" stroke-dasharray="3,2"/>
+                <line x1="4" y1="33" x2="44" y2="33" stroke="#a07840" stroke-width="1" stroke-dasharray="3,2"/>
+                <text x="24" y="31" text-anchor="middle" font-family="Cinzel,serif" font-size="11" fill="#c9920a" font-weight="600">20</text>
+              </svg>
+              <span class="dice-label">d20</span>
+            </button>
+            <button class="btn-dice" data-sides="100" onclick="selecionarDado(100)">
+              <svg class="dice-icon" viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="20" stroke="#a07840" stroke-width="2" fill="rgba(201,146,10,0.08)"/>
+                <circle cx="24" cy="24" r="14" stroke="#a07840" stroke-width="1" stroke-dasharray="4,3" fill="none"/>
+                <text x="24" y="29" text-anchor="middle" font-family="Cinzel,serif" font-size="9" fill="#c9920a" font-weight="600">100</text>
+              </svg>
+              <span class="dice-label">d100</span>
+            </button>
+            <button class="btn-dice" data-sides="custom" onclick="selecionarDado('custom')">
+              <svg class="dice-icon" viewBox="0 0 48 48" fill="none">
+                <rect x="7" y="7" width="34" height="34" rx="5" stroke="#a07840" stroke-width="2" stroke-dasharray="5,3" fill="rgba(201,146,10,0.06)"/>
+                <text x="24" y="30" text-anchor="middle" font-family="Cinzel,serif" font-size="14" fill="#c9920a" font-weight="600">?</text>
+              </svg>
+              <span class="dice-label">dX</span>
+            </button>
+          </div>
+
+          <div id="custom-input-wrap" class="mb-3" style="display:none;">
+            <div class="d-flex gap-2 align-items-center">
+              <span class="ctrl-label">Lados:</span>
+              <input type="number" id="custom-sides" min="2" max="9999" value="2"
+                class="form-control form-control-sm"
+                style="background:#1c0d04;border:1px solid #5a3c12;color:var(--parch);border-radius:8px;font-family:'Cinzel',serif;"
+                oninput="ladosCustom=parseInt(this.value)||2; atualizarFormula()" />
+            </div>
+          </div>
+
+          <div class="ctrl-row mb-2">
+            <span class="ctrl-label">Quantidade de dados</span>
+            <div class="ctrl-btns">
+              <button class="btn-ctrl" onclick="alterarQty(-1)">−</button>
+              <span class="ctrl-val" id="qty-display">1</span>
+              <button class="btn-ctrl" onclick="alterarQty(1)">+</button>
+            </div>
+          </div>
+
+          <div class="ctrl-row">
+            <span class="ctrl-label">Modificador</span>
+            <div class="ctrl-btns">
+              <button class="btn-ctrl" onclick="alterarMod(-1)">−</button>
+              <span class="ctrl-val" id="mod-display">+0</span>
+              <button class="btn-ctrl" onclick="alterarMod(1)">+</button>
+            </div>
+          </div>
+
+          <hr class="divider">
+
+          <button class="btn-roll" id="btn-roll" onclick="rolarDados()" disabled>
+            🎲 &nbsp; Rolar Dados
+          </button>
+        </div>
+      </div>
+
+      <!-- COLUNA DIREITA -->
+      <div class="col-lg-6 d-flex flex-column gap-3">
+
+        <div class="panel">
+          <div class="section-title">Resultado</div>
+
+          <div class="resultado-box">
+            <div class="res-label" id="res-label">Escolha um dado para começar</div>
+
+            <!-- Slots individuais por dado -->
+            <div id="dados-roll-grid"></div>
+
+            <!-- Total -->
+            <div class="total-row" id="total-row" style="display:none;">
+              <span class="total-label">Total</span>
+              <span id="valor-total">—</span>
+            </div>
+            <div id="mod-row"></div>
+            <div id="badge-especial"></div>
+          </div>
+
+          <hr class="divider">
+          <div class="section-title">Sessão</div>
+          <div class="row g-2">
+            <div class="col-4">
+              <div class="stat-card">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-name">Rolagens</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="stat-card">
+                <div class="stat-value" id="stat-max">—</div>
+                <div class="stat-name">Maior</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="stat-card">
+                <div class="stat-value" id="stat-min">—</div>
+                <div class="stat-name">Menor</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title" style="flex:1;margin-bottom:0;">Histórico</div>
+            <button class="btn-limpar" onclick="limparHistorico()">Limpar</button>
+          </div>
+          <ul class="historico-list" id="historico-list">
+            <li class="historico-vazio" id="historico-vazio">Nenhuma rolagem ainda...</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let dadoSelecionado = null;
+    let ladosCustom     = 2;
+    let quantidade      = 1;
+    let modificador     = 0;
+    let historico       = [];
+    let sessaoTotal     = 0;
+    let sessaoMax       = null;
+    let sessaoMin       = null;
+    let isRolando       = false;
+
+    function selecionarDado(lados) {
+      dadoSelecionado = lados;
+      document.querySelectorAll('.btn-dice').forEach(b => b.classList.remove('active'));
+      const btn = document.querySelector(`.btn-dice[data-sides="${lados}"]`);
+      if (btn) btn.classList.add('active');
+      document.getElementById('custom-input-wrap').style.display = lados === 'custom' ? 'block' : 'none';
+      document.getElementById('btn-roll').disabled = false;
+      atualizarFormula();
+    }
+
+    function alterarQty(delta) {
+      if (isRolando) return;
+      quantidade = Math.max(1, Math.min(12, quantidade + delta));
+      document.getElementById('qty-display').textContent = quantidade;
+      atualizarFormula();
+    }
+
+    function alterarMod(delta) {
+      if (isRolando) return;
+      modificador = Math.max(-99, Math.min(99, modificador + delta));
+      document.getElementById('mod-display').textContent = modificador >= 0 ? '+' + modificador : String(modificador);
+      atualizarFormula();
+    }
+
+    function getLados() {
+      return dadoSelecionado === 'custom'
+        ? (parseInt(document.getElementById('custom-sides').value) || 2)
+        : dadoSelecionado;
+    }
+
+    function atualizarFormula() {
+      if (!dadoSelecionado) return;
+      const lados = getLados();
+      const mod = modificador > 0 ? ' + ' + modificador : modificador < 0 ? ' − ' + Math.abs(modificador) : '';
+      document.getElementById('res-label').textContent = `${quantidade}d${lados}${mod}`;
+    }
+
+    /* ───── ROLAR COM ANIMAÇÃO ───── */
+    function rolarDados() {
+      if (!dadoSelecionado || isRolando) return;
+      const lados = getLados();
+      if (lados < 2) return;
+
+      isRolando = true;
+      document.getElementById('btn-roll').disabled = true;
+
+      // Resultados finais
+      const resultados = Array.from({ length: quantidade }, () => Math.floor(Math.random() * lados) + 1);
+
+      // Montar slots
+      const grid = document.getElementById('dados-roll-grid');
+      grid.innerHTML = '';
+      document.getElementById('total-row').style.display = 'none';
+      document.getElementById('mod-row').textContent = '';
+      document.getElementById('badge-especial').innerHTML = '';
+      document.getElementById('valor-total').textContent = '—';
+      document.getElementById('valor-total').classList.remove('show');
+
+      const slots = resultados.map((_, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'dado-slot';
+        const num = document.createElement('span');
+        num.className = 'slot-numero rolling';
+        num.textContent = '?';
+        slot.appendChild(num);
+        grid.appendChild(slot);
+        return { slot, num };
+      });
+
+      // Animação: cada dado para em cascata
+      const TICK      = 60;   // ms entre cada número aleatório
+      const TICKS_BEFORE_STOP = 10; // quantos ticks antes do final
+      const STAGGER   = 180;  // ms de atraso entre cada dado parar
+
+      slots.forEach(({ slot, num }, i) => {
+        const stopAt = Date.now() + TICKS_BEFORE_STOP * TICK + i * STAGGER;
+        let interval = null;
+
+        interval = setInterval(() => {
+          if (Date.now() >= stopAt) {
+            clearInterval(interval);
+            const val = resultados[i];
+            num.textContent = val;
+            num.classList.remove('rolling');
+
+            const esCritico = lados === 20 && val === 20;
+            const esFumble  = lados === 20 && val === 1;
+            if (esCritico) { num.classList.add('critico-num'); slot.classList.add('critico'); }
+            if (esFumble)  { num.classList.add('fumble-num');  slot.classList.add('fumble'); }
+            slot.classList.add('final');
+
+            // Último dado → mostrar total
+            if (i === slots.length - 1) {
+              setTimeout(() => mostrarTotal(resultados, lados), 120);
+            }
+          } else {
+            num.textContent = Math.floor(Math.random() * lados) + 1;
+          }
+        }, TICK);
+      });
+    }
+
+    function mostrarTotal(resultados, lados) {
+      const soma = resultados.reduce((a, b) => a + b, 0) + modificador;
+      const esCritico = lados === 20 && quantidade === 1 && resultados[0] === 20;
+      const esFumble  = lados === 20 && quantidade === 1 && resultados[0] === 1;
+
+      // Mostrar total apenas se mais de 1 dado ou modificador ativo
+      const elTotal = document.getElementById('valor-total');
+      if (quantidade > 1 || modificador !== 0) {
+        document.getElementById('total-row').style.display = 'flex';
+        elTotal.textContent = soma;
+        elTotal.classList.remove('show');
+        void elTotal.offsetWidth;
+        elTotal.classList.add('show');
+      }
+
+      // Linha do modificador
+      if (modificador !== 0) {
+        const modTxt = modificador > 0 ? `+ ${modificador}` : `− ${Math.abs(modificador)}`;
+        document.getElementById('mod-row').textContent = `Modificador: ${modTxt}`;
+      }
+
+      // Badge crítico/fumble
+      const badgeEl = document.getElementById('badge-especial');
+      if (esCritico)     badgeEl.innerHTML = '<span class="badge-especial critico">✦ Crítico!</span>';
+      else if (esFumble) badgeEl.innerHTML = '<span class="badge-especial fumble">✦ Fumble!</span>';
+
+      // Histórico
+      const mod = modificador > 0 ? ' + ' + modificador : modificador < 0 ? ' − ' + Math.abs(modificador) : '';
+      historico.unshift({
+        formula: `${quantidade}d${lados}${mod}`,
+        detalhe: resultados.join(', '),
+        resultado: soma,
+        critico: esCritico, fumble: esFumble
+      });
+      if (historico.length > 30) historico.pop();
+      renderHistorico();
+
+      // Stats
+      sessaoTotal++;
+      if (sessaoMax === null || soma > sessaoMax) sessaoMax = soma;
+      if (sessaoMin === null || soma < sessaoMin) sessaoMin = soma;
+      document.getElementById('stat-total').textContent = sessaoTotal;
+      document.getElementById('stat-max').textContent   = sessaoMax;
+      document.getElementById('stat-min').textContent   = sessaoMin;
+
+      isRolando = false;
+      document.getElementById('btn-roll').disabled = false;
+    }
+
+    function renderHistorico() {
+      const ul    = document.getElementById('historico-list');
+      const vazio = document.getElementById('historico-vazio');
+      vazio.style.display = historico.length === 0 ? 'block' : 'none';
+      ul.querySelectorAll('.historico-item').forEach(el => el.remove());
+      historico.forEach(h => {
+        const li  = document.createElement('li');
+        li.className = 'historico-item';
+        const cls = h.critico ? 'critico' : h.fumble ? 'fumble' : '';
+        const tag = h.critico || h.fumble ? ' ✦' : '';
+        const detalhe = h.detalhe && h.detalhe.includes(',')
+          ? `<span style="font-size:0.75rem;color:#6a4820;margin-left:4px;">[${h.detalhe}]</span>` : '';
+        li.innerHTML = `<span class="h-formula">${h.formula}${detalhe}</span><span class="h-result ${cls}">${h.resultado}${tag}</span>`;
+        ul.appendChild(li);
+      });
+    }
+
+    function limparHistorico() {
+      historico = [];
+      renderHistorico();
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && dadoSelecionado && !isRolando) rolarDados();
+    });
+  </script>
+</body>
+</html>
